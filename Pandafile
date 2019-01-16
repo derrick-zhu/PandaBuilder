@@ -1,0 +1,5 @@
+git git@github.com:derrick-zhu/FlutterPandaShop.git :branch => develop :local => pandashop
+git git@github.com:derrick-zhu/FlutterPDFImage.git :branch => develop :local => ff_pdf_view
+git git@github.com:derrick-zhu/FlutterPandaService.git :branch => develop :local => flutter_panda_service
+git git@github.com:derrick-zhu/FlutterPandaFoundation.git :branch => develop :local => flutter_panda_foundation
+git git@github.com:derrick-zhu/FlutterPandaAppKit.git :branch => develop :local => flutter_panda_appkit

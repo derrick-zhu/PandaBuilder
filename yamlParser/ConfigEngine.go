@@ -1,4 +1,4 @@
-package main
+package yamlParser
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type ConfigEngine struct {
@@ -22,7 +22,7 @@ func (c *ConfigEngine) Load(path string) error {
 	if ext == "" {
 		return errors.New("cant not load" + path + " config")
 	}
-	return c.loadFromYaml(path)
+	return c.LoadFromYaml(path)
 }
 
 //判断配置文件名是否为yaml格式
@@ -37,7 +37,7 @@ func (c *ConfigEngine) guessFileType(path string) string {
 }
 
 // 将配置yaml文件中的进行加载
-func (c *ConfigEngine) loadFromYaml(path string) error {
+func (c *ConfigEngine) LoadFromYaml(path string) error {
 	yamlS, readErr := ioutil.ReadFile(path)
 	if readErr != nil {
 		return readErr

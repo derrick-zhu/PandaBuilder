@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"PandaBuilder/gitable"
+	"PandaBuilder/models"
 	"os"
 	"path/filepath"
 )
@@ -17,18 +18,29 @@ func executePath() string {
 
 func main() {
 	execPath := executePath()
-	yamlFile := execPath + "/pubspec.yaml"
-	newYamlFile := execPath + "/pubspec.modified.yaml"
+	// yamlFile := execPath + "/pubspec.yaml"
+	// newYamlFile := execPath + "/pubspec.modified.yaml"
+	pandaFile := execPath + "/Pandafile"
+	pandaLockFile := execPath + "/Pandafile.lock"
 
-	ce := ConfigEngine{}
-	ce.loadFromYaml(yamlFile)
+	// ce := ConfigEngine{}
+	// ce.loadFromYaml(yamlFile)
 
-	res := ce.Get("dependencies")
+	// res := ce.Get("dependencies")
 
-	mapRes := res.(map[interface{}]interface{})
-	mapRes["hello"] = "world"
+	// mapRes := res.(map[interface{}]interface{})
+	// mapRes["hello"] = "world"
 
-	fmt.Println(res)
+	// fmt.Println(res)
 
-	ce.saveToYaml(newYamlFile)
+	// ce.saveToYaml(newYamlFile)
+
+	slnData := models.PandaSolutionModel{}
+	slnData.LoadFrom(pandaFile)
+
+	for idx := 0; idx < slnData.NumOfLibraries(); idx++ {
+		aLib := slnData.LibraryWithIndex(idx)
+		gitable.GitClone(aLib.Git, aLib.Name)
+	}
+
 }

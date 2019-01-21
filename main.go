@@ -17,6 +17,9 @@ func executePath() string {
 }
 
 func main() {
+	cl := CommandLine{}
+	cl.Parse()
+
 	execPath := executePath()
 	// yamlFile := execPath + "/pubspec.yaml"
 	// newYamlFile := execPath + "/pubspec.modified.yaml"
@@ -37,6 +40,7 @@ func main() {
 
 	slnData := models.PandaSolutionModel{}
 	slnData.LoadFrom(pandaFile)
+	slnData.LoadFromLock(pandaLockFile)
 
 	for idx := 0; idx < slnData.NumOfLibraries(); idx++ {
 		aLib := slnData.LibraryWithIndex(idx)

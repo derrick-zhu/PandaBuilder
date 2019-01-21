@@ -3,8 +3,10 @@ package models
 import (
 	"PandaBuilder/yamlParser"
 	"errors"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 )
 
 type ModuleModel struct {
@@ -70,10 +72,18 @@ func (c *ModulesModel) loadModules(values []interface{}) bool {
 	return true
 }
 
+const (
+	Git = 1 << iota
+)
+
 type PackageGitModel struct {
-	Type string
-	url  string
-	ref  string
+	repoType int
+	url      string
+	ref      string
+}
+
+func (c PackageGitModel) RepoType() int {
+	return c.repoType
 }
 
 func (c PackageGitModel) URL() string {
@@ -82,6 +92,14 @@ func (c PackageGitModel) URL() string {
 
 func (c PackageGitModel) REF() string {
 	return c.ref
+}
+
+func (c *PackageGitModel) SetUpWith(repo string) {
+	if strings.ToLower(repo) == "git" {
+		c.repoType = Git
+	} else {
+		log.Printf("** waring: unknow repo type \"%s\"", repo)
+	}
 }
 
 func (c *PackageGitModel) loadGitData(data map[interface{}]interface{}) bool {
@@ -93,11 +111,12 @@ func (c *PackageGitModel) loadGitData(data map[interface{}]interface{}) bool {
 	for key, value := range data {
 		switch value.(type) {
 		case map[interface{}]interface{}:
-			c.Type = key.(string)
+			c.SetUpWith(key.(string))
+
 			for propKey, propValue := range value.(map[interface{}]interface{}) {
-				if propKey == "url" {
+				if strings.ToLower(propKey.(string)) == "url" {
 					c.url = propValue.(string)
-				} else if propKey == "ref" {
+				} else if strings.ToLower(propKey.(string)) == "ref" {
 					c.ref = propValue.(string)
 				} else {
 					log.Printf("** warnning: mapping a undefined key: %s with value: %v", propKey, propValue)
@@ -107,6 +126,46 @@ func (c *PackageGitModel) loadGitData(data map[interface{}]interface{}) bool {
 			log.Printf("** fails: in mapping data: %v into PackageGitModel", value)
 		}
 		break
+	}
+
+	return true
+}
+
+const (
+	NotExisted = iota
+	Success
+	Existed
+	OperatorFails
+)
+
+type PandaSolutionLockModel struct {
+	PackageGitModel
+	lockRef string
+}
+
+func (c *PandaSolutionLockModel) loadFrom(pandaLine string) bool {
+	if len(pandaLine) <= 0 {
+		log.Printf("** warning: panda lock text is empty.")
+		return false
+	}
+
+	var allSegments []string = strings.Split(pandaLine, " ")
+	if len(allSegments) != 3 {
+		log.Printf("** warning: invalid lock item %s", pandaLine)
+		return false
+	}
+
+	for idx, eachSegment := range allSegments {
+		val := strings.Trim(eachSegment, " \"")
+		if idx == 0 {
+			c.SetUpWith(val)
+		} else if idx == 1 {
+			c.url = val
+		} else if idx == 2 {
+			c.lockRef = val
+		} else {
+			// EMPTY
+		}
 	}
 
 	return true
@@ -170,6 +229,7 @@ func (c *LibrariesModel) loadLibraries(libs []interface{}) bool {
 type PandaSolutionModel struct {
 	Modules   ModulesModel
 	Libraries LibrariesModel
+	Locks     PandaSolutionLockModel
 }
 
 func (c *PandaSolutionModel) ModuleWith(name string) *ModuleModel {
@@ -205,4 +265,29 @@ func (c *PandaSolutionModel) LoadFrom(path string) error {
 	c.Libraries.loadLibraries(idiot.([]interface{}))
 
 	return nil
+}
+
+func (c *PandaSolutionModel) LoadFromLock(lockFile string) int {
+	var err error
+	if _, err = os.Stat(lockFile); os.IsNotExist(err) {
+		return NotExisted
+	}
+	err = nil
+
+	var buffer []byte
+	if buffer, err = ioutil.ReadFile(lockFile); err != nil {
+		log.Fatalf("** error: error in reading %s: %v", lockFile, err)
+		return OperatorFails
+	}
+
+	lockTextLines := strings.Split(string(buffer), "\n")
+	c.Locks = PandaSolutionLockModel{}
+	for _, eachLockLine := range lockTextLines {
+		if false == c.Locks.loadFrom(eachLockLine) {
+			log.Fatalf("** fatal: fails in reading lock item: %s", eachLockLine)
+			break
+		}
+	}
+	///
+	return Success
 }

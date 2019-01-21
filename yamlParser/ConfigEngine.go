@@ -77,6 +77,7 @@ func (c *ConfigEngine) Get(name string) interface{} {
 		if (key + 1) == len(path) {
 			return v
 		}
+
 		if reflect.TypeOf(v).String() == "map[interface {}]interface {}" {
 			data = v.(map[interface{}]interface{})
 		}

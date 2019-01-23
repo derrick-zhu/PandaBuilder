@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -16,7 +17,7 @@ type GitProtocol interface {
 
 func GitFetch(aGit GitProtocol, remote string) bool {
 	if aGit == nil {
-		log.Println("** error: invalid git for fetch.")
+		log.Printf("\n** error: invalid git for fetch.")
 		return false
 	}
 	cmd := []string{}
@@ -31,7 +32,7 @@ func GitFetch(aGit GitProtocol, remote string) bool {
 	var buf bytes.Buffer
 	shellcmd.Stdout = &buf
 	if err := shellcmd.Run(); err != nil {
-		log.Fatalf("** error: fails in run command %s\n", err)
+		log.Fatalf("** error: fails in run command %s", err)
 		return false
 	}
 	return true
@@ -39,9 +40,62 @@ func GitFetch(aGit GitProtocol, remote string) bool {
 
 func GitRetrieveCommitHash(aGit GitProtocol, ref string) string {
 	if aGit == nil {
-		log.Println("** error: invalid git for retrieve commit hash")
+		log.Printf("\n** error: invalid git for retrieve commit hash")
 		return ""
 	}
+
+	cmd := []string{}
+	cmd = append(cmd, "ls-remote")
+	cmd = append(cmd, aGit.URL())
+	if len(ref) == 0 {
+		ref = "HEAD"
+	}
+	cmd = append(cmd, ref)
+
+	var buf bytes.Buffer
+
+	shellcmd := exec.Command("git", cmd...)
+	shellcmd.Stdout = &buf
+
+	if err := shellcmd.Run(); err != nil {
+		log.Fatalf("** error: fails in run command %s", err)
+		return ""
+	}
+
+	rawResult := strings.Trim(string(buf.Bytes()), "\t\n ")
+	re := regexp.MustCompile(`(?m)(^[a-z0-9]+)[\t ]+(refs\/heads\/(\w+)|HEAD)`)
+	filtedResult := re.FindAllString(rawResult, -1)
+
+	if len(filtedResult) == 0 {
+		log.Fatalf("** error: invalid commit hash fetched from remote repo: %s", aGit.URL())
+	}
+
+	filtedResult = strings.Split(filtedResult[0], "\t")
+
+	result := ""
+	for index, eachValue := range filtedResult {
+		if index%2 == 0 {
+			continue
+		}
+
+		founded := false
+		valueComponents := strings.Split(eachValue, "/")
+		for _, eachComp := range valueComponents {
+			founded = (eachComp == ref)
+			if founded {
+				break
+			}
+		}
+
+		if founded {
+			result = filtedResult[index-1]
+		}
+	}
+
+	return result
+}
+
+func GetRetrieveCurrentGitCommitHash(ref string) string {
 
 	cmd := []string{}
 	cmd = append(cmd, "rev-parse")
@@ -55,8 +109,7 @@ func GitRetrieveCommitHash(aGit GitProtocol, ref string) string {
 	var buf bytes.Buffer
 	shellcmd.Stdout = &buf
 	if err := shellcmd.Run(); err != nil {
-		log.Fatalf("** error: fails in run command %s\n", err)
-		return ""
+		log.Fatalf("** error: fails in run command %s", err)
 	}
 
 	return strings.Trim(string(buf.Bytes()), " \n\t")
@@ -64,17 +117,17 @@ func GitRetrieveCommitHash(aGit GitProtocol, ref string) string {
 
 func GitClone(aGit GitProtocol, local string) bool {
 	if aGit == nil {
-		log.Println("** error: invalid git for cloning")
+		log.Printf("\n** error: invalid git for cloning")
 		return false
 	}
 
 	if len(local) == 0 {
-		log.Println("** error: invalid git for cloning, local path is needed.")
+		log.Printf("\n** error: invalid git for cloning, local path is needed.")
 		return false
 	}
 
 	if len(aGit.URL()) == 0 || len(aGit.REF()) == 0 {
-		log.Println("** error: invalid git for cloning, information is not complete.")
+		log.Printf("\n** error: invalid git for cloning, information is not complete.")
 		return false
 	}
 

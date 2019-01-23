@@ -1,8 +1,8 @@
 package main
 
 import (
-	"PandaBuilder/gitable"
-	"PandaBuilder/models"
+	"PandaBuilder/command"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -21,10 +21,38 @@ func main() {
 	cl.Parse()
 
 	execPath := executePath()
-	// yamlFile := execPath + "/pubspec.yaml"
-	// newYamlFile := execPath + "/pubspec.modified.yaml"
 	pandaFile := execPath + "/Pandafile"
 	pandaLockFile := execPath + "/Pandafile.lock"
+
+	cl.Append(execPath)
+	cl.Append(pandaFile)
+	cl.Append(pandaLockFile)
+
+	var cmd command.CommandProtocol
+
+	switch cl.Type {
+	case setup:
+		cmd = command.Factory("setup", cl.Params)
+		break
+
+	case outdated:
+		cmd = command.Factory("outdated", cl.Params)
+		break
+
+	case update:
+		cmd = command.Factory("update", cl.Params)
+		break
+
+	case bootstrap:
+		cmd = command.Factory("bootstrap", cl.Params)
+		break
+
+	default:
+		log.Printf("\n** warning: invalid command: \"%v\"", cl.Params)
+	}
+
+	cmd.Run()
+	cmd.Done()
 
 	// ce := ConfigEngine{}
 	// ce.loadFromYaml(yamlFile)
@@ -38,13 +66,16 @@ func main() {
 
 	// ce.saveToYaml(newYamlFile)
 
-	slnData := models.PandaSolutionModel{}
-	slnData.LoadFrom(pandaFile)
-	slnData.LoadFromLock(pandaLockFile)
+	// slnData := models.PandaSolutionModel{}
+	// slnData.LoadFrom(pandaFile)
+	// slnData.LoadFromLock(pandaLockFile)
+	// slnData.LoadRemoteCommit()
 
-	for idx := 0; idx < slnData.NumOfLibraries(); idx++ {
-		aLib := slnData.LibraryWithIndex(idx)
-		gitable.GitClone(aLib.Git, aLib.Name)
-	}
+	// fmt.Printf("%v", slnData)
+
+	// for idx := 0; idx < slnData.NumOfLibraries(); idx++ {
+	// 	aLib := slnData.LibraryWithIndex(idx)
+	// 	gitable.GitClone(aLib.Git, aLib.Name)
+	// }
 
 }

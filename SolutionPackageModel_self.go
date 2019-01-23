@@ -123,7 +123,7 @@ package main
 // 	}
 
 // 	slnPkg := string(slnPkgBuff)
-// 	pkgs := strings.Split(slnPkg, "\n")
+// 	pkgs := strings.Split(slnPkg, "")
 
 // 	for _, eachPkg := range pkgs {
 // 		if len(strings.Trim(eachPkg, " ")) <= 0 {

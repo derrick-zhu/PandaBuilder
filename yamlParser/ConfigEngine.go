@@ -43,9 +43,8 @@ func (c *ConfigEngine) LoadFromYaml(path string) error {
 		return readErr
 	}
 	// yaml解析的时候c.data如果没有被初始化，会自动为你做初始化
-	err := yaml.Unmarshal(yamlS, &c.data)
-	if err != nil {
-		return errors.New("can not parse " + path + " config")
+	if err := yaml.Unmarshal(yamlS, &c.data); err != nil {
+		return err
 	}
 	return nil
 }

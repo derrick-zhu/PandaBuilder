@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 )
 
 const (
@@ -13,28 +12,35 @@ const (
 )
 
 type CommandLine struct {
-	Type  int
-	param []string
+	Type   int
+	Params []string
 }
 
 func (c *CommandLine) Parse() bool {
-	cmdSetup := flag.String("setup", "", "init and setup flutter workspace")
-	cmdUpdate := flag.String("update", "", "fetch and update Pandafile.lock and its flutter workspace")
-	cmdOutdated := flag.String("outdated", "", "fetch and update Pandafile.lock")
-	cmdBootstrap := flag.String("bootstrap", "", "update flutter workspace by Pandafile.lock")
+	cmdSetup := flag.Bool("setup", false, "init and setup flutter workspace")
+	cmdUpdate := flag.Bool("update", false, "fetch and update Pandafile.lock and its flutter workspace")
+	cmdOutdated := flag.Bool("outdated", false, "fetch and update Pandafile.lock")
+	cmdBootstrap := flag.Bool("bootstrap", false, "update flutter workspace by Pandafile.lock")
 
 	flag.Parse()
 
-	log.Printf("\nsetup:%s \nupdate:%s \noutdated:%s \nbootstrap:%s \n", *cmdSetup, *cmdUpdate, *cmdOutdated, *cmdBootstrap)
+	//log.Printf("\nsetup:%t \nupdate:%t \noutdated:%t \nbootstrap:%t ", *cmdSetup, *cmdUpdate, *cmdOutdated, *cmdBootstrap)
 
-	if len(*cmdBootstrap) == 0 {
+	if *cmdBootstrap {
 		c.Type = bootstrap
-	} else if len(*cmdOutdated) == 0 {
+	} else if *cmdOutdated {
 		c.Type = outdated
-	} else if len(*cmdUpdate) == 0 {
+	} else if *cmdUpdate {
 		c.Type = update
-	} else if len(*cmdSetup) == 0 {
+	} else if *cmdSetup {
 		c.Type = setup
 	}
 	return true
+}
+
+func (c *CommandLine) Append(newParam string) {
+	if c.Params == nil {
+		c.Params = []string{}
+	}
+	c.Params = append(c.Params, newParam)
 }

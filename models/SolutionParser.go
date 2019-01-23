@@ -1,135 +1,16 @@
 package models
 
 import (
+	"PandaBuilder/gitable"
 	"PandaBuilder/yamlParser"
+	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
-
-type ModuleModel struct {
-	name       string
-	Path       string
-	Dependency []string
-}
-
-func (c *ModuleModel) loadModule(mapValue map[interface{}]interface{}) bool {
-	if mapValue == nil {
-		log.Printf("warning: null data for ModuleModel")
-		return true
-	}
-
-	for key, value := range mapValue {
-		switch value.(type) {
-		case map[interface{}]interface{}:
-			c.name = key.(string)
-			for skey, sval := range value.(map[interface{}]interface{}) {
-				if skey == "path" {
-					c.Path = sval.(string)
-				} else if skey == "dependency" {
-					c.Dependency = []string{}
-					for _, dep := range sval.([]interface{}) {
-						c.Dependency = append(c.Dependency, dep.(string))
-					}
-				} else {
-					log.Printf("** warning: mapping a undefined key: %s with value: %v", skey, sval)
-				}
-			}
-		default:
-			log.Printf("** fails: in mapping data: %v into ModuleModel", value)
-		}
-		break // sorry, just only once, and who don't know about key's value, so using a iterator
-	}
-	return true
-}
-
-type ModulesModel struct {
-	Modules []ModuleModel
-}
-
-func (c *ModulesModel) ModuleWith(name string) *ModuleModel {
-	for _, mod := range c.Modules {
-		if mod.name == name {
-			return &mod
-		}
-	}
-	return nil
-}
-
-func (c *ModulesModel) loadModules(values []interface{}) bool {
-	if values == nil {
-		return false
-	}
-
-	c.Modules = []ModuleModel{}
-	for _, value := range values {
-		moduleValue := ModuleModel{}
-		moduleValue.loadModule(value.(map[interface{}]interface{}))
-		c.Modules = append(c.Modules, moduleValue)
-	}
-	return true
-}
-
-const (
-	Git = 1 << iota
-)
-
-type PackageGitModel struct {
-	repoType int
-	url      string
-	ref      string
-}
-
-func (c PackageGitModel) RepoType() int {
-	return c.repoType
-}
-
-func (c PackageGitModel) URL() string {
-	return c.url
-}
-
-func (c PackageGitModel) REF() string {
-	return c.ref
-}
-
-func (c *PackageGitModel) SetUpWith(repo string) {
-	if strings.ToLower(repo) == "git" {
-		c.repoType = Git
-	} else {
-		log.Printf("** waring: unknow repo type \"%s\"", repo)
-	}
-}
-
-func (c *PackageGitModel) loadGitData(data map[interface{}]interface{}) bool {
-	if data == nil {
-		log.Printf("** warning: null data for PackageGitModel")
-		return true
-	}
-
-	for key, value := range data {
-		switch value.(type) {
-		case map[interface{}]interface{}:
-			c.SetUpWith(key.(string))
-
-			for propKey, propValue := range value.(map[interface{}]interface{}) {
-				if strings.ToLower(propKey.(string)) == "url" {
-					c.url = propValue.(string)
-				} else if strings.ToLower(propKey.(string)) == "ref" {
-					c.ref = propValue.(string)
-				} else {
-					log.Printf("** warnning: mapping a undefined key: %s with value: %v", propKey, propValue)
-				}
-			}
-		default:
-			log.Printf("** fails: in mapping data: %v into PackageGitModel", value)
-		}
-		break
-	}
-
-	return true
-}
 
 const (
 	NotExisted = iota
@@ -138,110 +19,58 @@ const (
 	OperatorFails
 )
 
-type PandaSolutionLockModel struct {
-	PackageGitModel
-	lockRef string
-}
-
-func (c *PandaSolutionLockModel) loadFrom(pandaLine string) bool {
-	if len(pandaLine) <= 0 {
-		log.Printf("** warning: panda lock text is empty.")
-		return false
-	}
-
-	var allSegments []string = strings.Split(pandaLine, " ")
-	if len(allSegments) != 3 {
-		log.Printf("** warning: invalid lock item %s", pandaLine)
-		return false
-	}
-
-	for idx, eachSegment := range allSegments {
-		val := strings.Trim(eachSegment, " \"")
-		if idx == 0 {
-			c.SetUpWith(val)
-		} else if idx == 1 {
-			c.url = val
-		} else if idx == 2 {
-			c.lockRef = val
-		} else {
-			// EMPTY
-		}
-	}
-
-	return true
-}
-
-type LibraryModel struct {
-	Name string
-	Git  PackageGitModel
-}
-
-func (c *LibraryModel) loadLibrary(data map[interface{}]interface{}) bool {
-	if data == nil {
-		log.Printf("** warning: null data for LibraryModel")
-		return true
-	}
-
-	for key, value := range data {
-		switch value.(type) {
-		case map[interface{}]interface{}:
-			c.Name = key.(string)
-			c.Git = PackageGitModel{}
-			c.Git.loadGitData(value.(map[interface{}]interface{}))
-
-		default:
-			log.Printf("** warning: invalid type for %s of data: %v", key, value)
-		}
-		break
-	}
-	return true
-}
-
-type LibrariesModel struct {
-	Libraries []LibraryModel
-}
-
-func (c *LibrariesModel) LibraryWithIndex(index int) *LibraryModel {
-	if index < 0 || index >= len(c.Libraries) {
-		return nil
-	}
-	return &c.Libraries[index]
-}
-
-func (c *LibrariesModel) Length() int {
-	return len(c.Libraries)
-}
-
-func (c *LibrariesModel) loadLibraries(libs []interface{}) bool {
-	if libs == nil {
-		return false
-	}
-
-	c.Libraries = []LibraryModel{}
-	for _, value := range libs {
-		aLib := LibraryModel{}
-		aLib.loadLibrary(value.(map[interface{}]interface{}))
-		c.Libraries = append(c.Libraries, aLib)
-	}
-	return true
-}
-
 type PandaSolutionModel struct {
-	Modules   ModulesModel
-	Libraries LibrariesModel
-	Locks     PandaSolutionLockModel
+	Modules   *ModulesModel
+	Libraries *LibrariesModel
+	Locks     []*PandaSolutionLockModel
+	Remote    []*PandaSolutionLockModel
 }
 
-func (c *PandaSolutionModel) ModuleWith(name string) *ModuleModel {
-	return c.Modules.ModuleWith(name)
+func (c *PandaSolutionModel) ModuleWithName(name string) *ModuleModel {
+	return c.Modules.ModuleWithName(name)
 }
 
 func (c *PandaSolutionModel) LibraryWithIndex(index int) *LibraryModel {
 	return c.Libraries.LibraryWithIndex(index)
 }
 
+func (c *PandaSolutionModel) LibraryWithName(name string) *LibraryModel {
+	return c.Libraries.LibraryWithName(name)
+}
+
 func (c *PandaSolutionModel) NumOfLibraries() int {
 	return c.Libraries.Length()
+}
+
+func (c *PandaSolutionModel) LockedLibraryWithUrl(url string) *PandaSolutionLockModel {
+	if len(url) == 0 {
+		return nil
+	}
+	for _, eachLock := range c.Locks {
+		if eachLock.url == url {
+			return eachLock
+		}
+	}
+	return nil
+}
+
+func (c *PandaSolutionModel) AppendLockLibrary(lockedModule *PandaSolutionLockModel) {
+	if lockedModule != nil {
+		c.Locks = append(c.Locks, lockedModule)
+	}
+}
+
+func (c *PandaSolutionModel) RemoteLibraryWithUrl(url string) *PandaSolutionLockModel {
+	if len(url) == 0 {
+		return nil
+	}
+
+	for _, eachRemote := range c.Remote {
+		if eachRemote.url == url {
+			return eachRemote
+		}
+	}
+	return nil
 }
 
 func (c *PandaSolutionModel) LoadFrom(path string) error {
@@ -251,17 +80,18 @@ func (c *PandaSolutionModel) LoadFrom(path string) error {
 	}
 
 	ce := yamlParser.ConfigEngine{}
-	if ce.LoadFromYaml(path) != nil {
-		return errors.New("error: fails in loading Pandafile: " + path)
+	if err := ce.LoadFromYaml(path); err != nil {
+		log.Printf("\n** error: \"%v\" in reading \"%s\".", err, path)
+		return err
 	}
 
 	var idiot interface{}
 	idiot = ce.Get("modules")
-	c.Modules = ModulesModel{}
+	c.Modules = &ModulesModel{}
 	c.Modules.loadModules(idiot.([]interface{}))
 
 	idiot = ce.Get("libraries")
-	c.Libraries = LibrariesModel{}
+	c.Libraries = &LibrariesModel{}
 	c.Libraries.loadLibraries(idiot.([]interface{}))
 
 	return nil
@@ -276,18 +106,101 @@ func (c *PandaSolutionModel) LoadFromLock(lockFile string) int {
 
 	var buffer []byte
 	if buffer, err = ioutil.ReadFile(lockFile); err != nil {
-		log.Fatalf("** error: error in reading %s: %v", lockFile, err)
+		log.Fatalf("\n** error: error in reading %s: %v", lockFile, err)
 		return OperatorFails
 	}
 
 	lockTextLines := strings.Split(string(buffer), "\n")
-	c.Locks = PandaSolutionLockModel{}
+	c.Locks = []*PandaSolutionLockModel{}
 	for _, eachLockLine := range lockTextLines {
-		if false == c.Locks.loadFrom(eachLockLine) {
-			log.Fatalf("** fatal: fails in reading lock item: %s", eachLockLine)
+		pLock := &PandaSolutionLockModel{}
+		if false == pLock.LoadFromLock(eachLockLine) {
+			log.Fatalf("\n** fatal: fails in reading lock item: %s", eachLockLine)
 			break
 		}
+		c.Locks = append(c.Locks, pLock)
 	}
 	///
 	return Success
 }
+
+func (c *PandaSolutionModel) LoadRemoteCommit() bool {
+	if c.Remote == nil {
+		c.Remote = []*PandaSolutionLockModel{}
+	}
+
+	for _, eachRepo := range c.Libraries.Libraries {
+		fmt.Printf("\n** fetch %s", eachRepo.Name)
+		curRepoRefCommitHash := gitable.GitRetrieveCommitHash(eachRepo.Git, eachRepo.Git.REF())
+		if len(curRepoRefCommitHash) <= 0 {
+			log.Printf("\n** warning: could not fetch library ref: %s's commit hash", eachRepo.Git.REF())
+			continue
+		}
+		pRemote := NewPandaSolutionLockModel(
+			eachRepo.Git.RepoType(),
+			eachRepo.Git.URL(),
+			eachRepo.Git.REF(),
+			curRepoRefCommitHash,
+		)
+		c.Remote = append(c.Remote, pRemote)
+		fmt.Printf("\n** Result: git: %s, ref: %s, commit: %s", pRemote.URL(), pRemote.REF(), pRemote.CommitHash)
+	}
+	return true
+}
+
+func (c *PandaSolutionModel) SyncLockData() (bool, error) {
+	var err error
+	var modified bool
+
+	for idx := 0; idx < c.Libraries.Length(); idx++ {
+		libData := c.LibraryWithIndex(idx)
+		lockedData := c.LockedLibraryWithUrl(libData.Git.url)
+		remoteData := c.RemoteLibraryWithUrl(libData.Git.url)
+
+		if lockedData == nil && remoteData == nil {
+			log.Printf("\n** error: could not find remote library: %s", libData.Git.url)
+			err = fmt.Errorf("** error: could not find remote library: %s", libData.Git.url)
+		} else {
+			if lockedData == nil {
+				lockedData = NewPandaSolutionLockModel(libData.Git.repoType, libData.Git.url, libData.Git.ref, remoteData.CommitHash)
+				c.AppendLockLibrary(lockedData)
+				modified = true
+			} else if remoteData == nil {
+				// EMPTY
+			} else {
+				lockedData.repoType = remoteData.repoType
+				lockedData.ref = remoteData.ref
+				lockedData.CommitHash = remoteData.CommitHash
+				modified = true
+			}
+		}
+
+		if err != nil {
+			break
+		}
+	}
+	return modified, err
+}
+
+func (c *PandaSolutionModel) SyncLockFile(lockFile string) error {
+	if len(lockFile) == 0 {
+		log.Printf("\n** error: invalid lock file to write lock data")
+		return fmt.Errorf("\n** error: invalid lock file to write lock data")
+	}
+
+	var err error
+	allLockDescriptions := []string{}
+	for _, eachLockData := range c.Locks {
+		lockDescription := eachLockData.ToLockDescription()
+		allLockDescriptions = append(allLockDescriptions, lockDescription)
+	}
+
+	result := strings.Join(allLockDescriptions, "\n")
+	if err = ioutil.WriteFile(lockFile, bytes.NewBufferString(result).Bytes(), os.ModePerm); err != nil {
+		return err
+	}
+
+	return err
+}
+
+// PRIVATE HELPERS

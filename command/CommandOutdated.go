@@ -4,6 +4,7 @@ import (
 	"PandaBuilder/models"
 	"fmt"
 	"log"
+	"path/filepath"
 )
 
 type CommandOutdated struct {
@@ -20,13 +21,28 @@ func NewCommandOutdated(argv []string) *CommandOutdated {
 
 func (c *CommandOutdated) Start(argv []string) bool {
 	if len(argv) < 3 {
-		log.Fatalf("** error: invalid parameters %v", argv)
+		log.Fatalf("\n** error: invalid parameters %v", argv)
 		return false
 	}
 
 	c.pandaFile = argv[1]
 	c.pandaLockFile = argv[2]
 	c.solutionData = &models.PandaSolutionModel{}
+	var err error
+
+	if filepath.IsAbs(c.pandaFile) == false {
+		if c.pandaFile, err = filepath.Abs(c.pandaFile); err != nil {
+			log.Printf("\n** error: could not get absolute directory path for %s", c.pandaFile)
+			return false
+		}
+	}
+
+	if filepath.IsAbs(c.pandaLockFile) == false {
+		if c.pandaLockFile, err = filepath.Abs(c.pandaLockFile); err != nil {
+			log.Printf("\n** error: could not get absolute directory path for %s", c.pandaLockFile)
+			return false
+		}
+	}
 
 	return true
 }
@@ -61,7 +77,7 @@ func (c *CommandOutdated) Run() {
 		}
 		fmt.Printf("\n** Info: Panda lock file had been updated.")
 	} else {
-		fmt.Printf("\n** Info: No commit updated. Skip write Panda lock file")
+		fmt.Printf("\n** Info: No commit updated. Skip write Panda lock file.")
 	}
 }
 

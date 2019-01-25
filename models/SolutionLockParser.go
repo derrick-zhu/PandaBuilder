@@ -26,7 +26,7 @@ func (c *PandaSolutionLockModel) LoadFromLock(pandaLine string) bool {
 		return false
 	}
 
-	var allSegments []string = strings.Split(pandaLine, " ")
+	var allSegments []string = strings.Fields(pandaLine)
 	if len(allSegments) != 3 {
 		log.Printf("\n** warning: invalid lock item %s", pandaLine)
 		return false

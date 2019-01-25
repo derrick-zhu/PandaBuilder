@@ -2,7 +2,8 @@ package main
 
 import (
 	"PandaBuilder/command"
-	"log"
+	"PandaBuilder/shell"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -17,38 +18,41 @@ func executePath() string {
 }
 
 func main() {
-	cl := CommandLine{}
+	cl := shell.CommandLine{}
 	cl.Parse()
 
 	execPath := executePath()
 	pandaFile := execPath + "/Pandafile"
 	pandaLockFile := execPath + "/Pandafile.lock"
 
-	cl.Append(execPath)
-	cl.Append(pandaFile)
-	cl.Append(pandaLockFile)
+	cl.AppendCommandParam(execPath)
+	cl.AppendCommandParam(pandaFile)
+	cl.AppendCommandParam(pandaLockFile)
 
 	var cmd command.CommandProtocol
 
 	switch cl.Type {
-	case setup:
+	case shell.Setup:
 		cmd = command.Factory("setup", cl.Params)
 		break
 
-	case outdated:
+	case shell.Outdated:
 		cmd = command.Factory("outdated", cl.Params)
 		break
 
-	case update:
+	case shell.Update:
 		cmd = command.Factory("update", cl.Params)
 		break
 
-	case bootstrap:
+	case shell.Bootstrap:
 		cmd = command.Factory("bootstrap", cl.Params)
 		break
 
 	default:
-		log.Printf("\n** warning: invalid command: \"%v\"", cl.Params)
+		fmt.Printf("\n** warning: invalid command: \"%v\"\n", cl.Type)
+		cl.ShowHelp()
+
+		return
 	}
 
 	cmd.Run()

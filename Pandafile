@@ -20,20 +20,20 @@ modules:
 libraries:
   - pandashop:
       git: 
-        url: git@github.com:derrick-zhu/FlutterPandaShop.git
+        url: https://github.com/derrick-zhu/FlutterPandaShop.git
         ref: develop
 
   - ff_pdf_view:
       git:
-        url: git@github.com:derrick-zhu/FlutterPDFImage.git
+        url: https://github.com/derrick-zhu/FlutterPDFImage.git
         ref: develop
 
   - flutter_panda_foundation:
       git:
-        url: git@github.com:derrick-zhu/FlutterPandaFoundation.git
+        url: https://github.com/derrick-zhu/FlutterPandaFoundation.git
         ref: develop
 
   - flutter_panda_appkit:
       git:
-        url: git@github.com:derrick-zhu/FlutterPandaAppKit.git
+        url: https://github.com/derrick-zhu/FlutterPandaAppKit.git
         ref: develop

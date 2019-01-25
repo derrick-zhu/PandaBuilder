@@ -1,9 +1,10 @@
 package gitable
 
 import (
+	"PandaBuilder/shell"
 	"bytes"
+	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -44,17 +45,13 @@ func GitRetrieveCommitHash(aGit GitProtocol, ref string) string {
 		return ""
 	}
 
-	cmd := []string{}
-	cmd = append(cmd, "ls-remote")
-	cmd = append(cmd, aGit.URL())
 	if len(ref) == 0 {
 		ref = "HEAD"
 	}
-	cmd = append(cmd, ref)
-
 	var buf bytes.Buffer
 
-	shellcmd := exec.Command("git", cmd...)
+	cmdStr := fmt.Sprintf("git ls-remote %s %s", aGit.URL(), ref)
+	shellcmd := shell.ShellCommandWith(cmdStr)
 	shellcmd.Stdout = &buf
 
 	if err := shellcmd.Run(); err != nil {
@@ -70,7 +67,7 @@ func GitRetrieveCommitHash(aGit GitProtocol, ref string) string {
 		log.Fatalf("** error: invalid commit hash fetched from remote repo: %s", aGit.URL())
 	}
 
-	filtedResult = strings.Split(filtedResult[0], "\t")
+	filtedResult = strings.Fields(filtedResult[0])
 
 	result := ""
 	for index, eachValue := range filtedResult {
@@ -97,17 +94,15 @@ func GitRetrieveCommitHash(aGit GitProtocol, ref string) string {
 
 func GetRetrieveCurrentGitCommitHash(ref string) string {
 
-	cmd := []string{}
-	cmd = append(cmd, "rev-parse")
 	if len(ref) == 0 {
-		cmd = append(cmd, "HEAD")
-	} else {
-		cmd = append(cmd, ref)
+		ref = "HEAD"
 	}
+	cmdStr := fmt.Sprintf("git rev-parse --verify %s", ref)
+	shellcmd := shell.ShellCommandWith(cmdStr)
 
-	shellcmd := exec.Command("git", cmd...)
 	var buf bytes.Buffer
 	shellcmd.Stdout = &buf
+
 	if err := shellcmd.Run(); err != nil {
 		log.Fatalf("** error: fails in run command %s", err)
 	}
@@ -131,20 +126,10 @@ func GitClone(aGit GitProtocol, local string) bool {
 		return false
 	}
 
-	cmd := []string{}
-	cmd = append(cmd, "clone")
-	cmd = append(cmd, aGit.URL())
-	cmd = append(cmd, "--single-branch")
-	cmd = append(cmd, "--branch")
-	cmd = append(cmd, aGit.REF())
-	cmd = append(cmd, local)
+	cmdStr := fmt.Sprintf("git clone %s --single-branch --branch %s %s", aGit.URL(), aGit.REF(), local)
+	shellcmd := shell.ShellCommandWith(cmdStr)
 
-	shellcmd := exec.Command("git", cmd...)
-	shellcmd.Stdout = os.Stdout
-	shellcmd.Stdin = os.Stdin
-	shellcmd.Stderr = os.Stderr
-
-	log.Printf("Start... %v", shellcmd)
+	fmt.Printf("\n** Clone %s...", aGit.URL())
 	if err := shellcmd.Run(); err != nil {
 		log.Fatalf("fails in cloning git resposity: %s. (%v)", aGit.URL(), err)
 		return false

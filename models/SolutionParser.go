@@ -9,7 +9,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/bclicn/color"
 )
 
 const (
@@ -71,6 +74,53 @@ func (c *PandaSolutionModel) RemoteLibraryWithUrl(url string) *PandaSolutionLock
 		}
 	}
 	return nil
+}
+
+func (self *PandaSolutionModel) SetupPandafile(path string) bool {
+	if len(path) == 0 {
+		log.Fatalf("\n** error: invalid directory for the flutter project workspace.")
+		return false
+	}
+
+	pandaFile := filepath.Join(path, "Pandafile")
+
+	if fi, _ := os.Stat(pandaFile); fi != nil {
+		fmt.Printf("\n** warning: Pandafile is existed.\n** Skip setup flutter project environments.")
+		return false
+	}
+
+	temp :=
+		`modules:
+#  - appA:
+#    path: appA/
+#    dependency:
+#	  - libA
+#  - libA:
+#	  path: libA/
+#	  dependency:
+#		- libB
+#  - libB:
+#      path: appA/
+#      dependency:
+
+libraries:
+#  - libA:
+#      git:
+#        url: xx/xx/xx.git
+#		ref: develop
+#  - libB:
+#      git:
+#        url: yy/yy/yy.git
+#        ref: develop
+	`
+
+	if err := ioutil.WriteFile(pandaFile, bytes.NewBufferString(temp).Bytes(), os.ModePerm); err != nil {
+		log.Fatalf("\n** error: fails in write panda file: %s", pandaFile)
+		return false
+	} else {
+		fmt.Printf("\n** Flutter project environment had been setted up. \n** JOB DONE!. Have fun.")
+		return true
+	}
 }
 
 func (c *PandaSolutionModel) LoadFrom(path string) error {
@@ -157,19 +207,27 @@ func (c *PandaSolutionModel) SyncLockData() (bool, error) {
 		lockedData := c.LockedLibraryWithUrl(libData.Git.url)
 		remoteData := c.RemoteLibraryWithUrl(libData.Git.url)
 
-		if lockedData == nil && remoteData == nil {
-			log.Printf("\n** error: could not find remote library: %s", libData.Git.url)
-			err = fmt.Errorf("** error: could not find remote library: %s", libData.Git.url)
+		if remoteData == nil {
+			fmt.Printf("\n** warning: could not fetch \"%s\" remote commit.", libData.Name)
+			err = fmt.Errorf("\n** Error: could not find remote library: %s [%s].", libData.Name, libData.Git.URL())
+			break
+		}
+
+		if lockedData == nil {
+			fmt.Printf("\n** Update %s: NEW to commit: %s", libData.Name, remoteData.CommitHash)
+			lockedData = NewPandaSolutionLockModel(libData.Git.repoType, libData.Git.url, libData.Git.ref, remoteData.CommitHash)
+			c.AppendLockLibrary(lockedData)
+			modified = true
+
 		} else {
-			if lockedData == nil {
-				lockedData = NewPandaSolutionLockModel(libData.Git.repoType, libData.Git.url, libData.Git.ref, remoteData.CommitHash)
-				c.AppendLockLibrary(lockedData)
-				modified = true
-			} else if remoteData == nil {
-				// EMPTY
+			if lockedData.CommitHash == remoteData.CommitHash {
+				// SKIP, nonthing changed for this lib
+				fmt.Printf("\n** Using: %s: (%s)", color.Green(libData.Name), lockedData.CommitHash)
+
 			} else {
-				lockedData.repoType = remoteData.repoType
-				lockedData.ref = remoteData.ref
+				fmt.Printf("\n** Update: %s: (%s) -> (%s)", color.Red(libData.Name), lockedData.CommitHash, remoteData.CommitHash)
+				lockedData.repoType = libData.Git.repoType
+				lockedData.ref = libData.Git.ref
 				lockedData.CommitHash = remoteData.CommitHash
 				modified = true
 			}
@@ -197,7 +255,7 @@ func (c *PandaSolutionModel) SyncLockFile(lockFile string) error {
 
 	result := strings.Join(allLockDescriptions, "\n")
 	if err = ioutil.WriteFile(lockFile, bytes.NewBufferString(result).Bytes(), os.ModePerm); err != nil {
-		return err
+		return fmt.Errorf("\n** error: fails to write Pandafile.lock. %v", err)
 	}
 
 	return err

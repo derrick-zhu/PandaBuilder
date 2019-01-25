@@ -6,27 +6,33 @@ import (
 )
 
 const (
+	// Git package repo type: git repo
 	Git = iota
 )
 
+// PackageGitModel the struct about the information of the git repo
 type PackageGitModel struct {
 	repoType int
 	url      string
 	ref      string
 }
 
+// RepoType repo type in integer format
 func (c PackageGitModel) RepoType() int {
 	return c.repoType
 }
 
+// URL repo's url address
 func (c PackageGitModel) URL() string {
 	return c.url
 }
 
+// REF current repo state, it could be a branch name, a tag or a commit hash(really??)
 func (c PackageGitModel) REF() string {
 	return c.ref
 }
 
+// SetUpWith set with the repo type by string, it could be git, etc.
 func (c *PackageGitModel) SetUpWith(repo string) {
 	if strings.ToLower(repo) == "git" {
 		c.repoType = Git
@@ -35,6 +41,7 @@ func (c *PackageGitModel) SetUpWith(repo string) {
 	}
 }
 
+// RepoTypeDescription get the repo type in string format, it could returns git etc.
 func (c *PackageGitModel) RepoTypeDescription() string {
 	Repo := []string{"git"}
 	if c.repoType < 0 || c.repoType >= len(Repo) {

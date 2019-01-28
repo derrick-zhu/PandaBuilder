@@ -1,9 +1,8 @@
 package command
 
 import (
+	"PandaBuilder/logger"
 	"PandaBuilder/models"
-	"fmt"
-	"log"
 	"path/filepath"
 )
 
@@ -21,7 +20,7 @@ func NewCommandOutdated(argv []string) *CommandOutdated {
 
 func (c *CommandOutdated) Start(argv []string) bool {
 	if len(argv) < 3 {
-		log.Fatalf("\n** error: invalid parameters %v", argv)
+		logger.Fatal("\n** Error: invalid parameters %v", argv)
 		return false
 	}
 
@@ -32,14 +31,14 @@ func (c *CommandOutdated) Start(argv []string) bool {
 
 	if filepath.IsAbs(c.pandaFile) == false {
 		if c.pandaFile, err = filepath.Abs(c.pandaFile); err != nil {
-			log.Printf("\n** error: could not get absolute directory path for %s", c.pandaFile)
+			logger.Error("\n Error: could not get absolute directory path for %s", c.pandaFile)
 			return false
 		}
 	}
 
 	if filepath.IsAbs(c.pandaLockFile) == false {
 		if c.pandaLockFile, err = filepath.Abs(c.pandaLockFile); err != nil {
-			log.Printf("\n** error: could not get absolute directory path for %s", c.pandaLockFile)
+			logger.Error("\n Error: could not get absolute directory path for %s", c.pandaLockFile)
 			return false
 		}
 	}
@@ -50,34 +49,34 @@ func (c *CommandOutdated) Start(argv []string) bool {
 func (c *CommandOutdated) Run() {
 	var err error
 	if err = c.solutionData.LoadFrom(c.pandaFile); err != nil {
-		log.Fatalf("\n** error: fails in reading Pandfile: %s.", c.pandaFile)
+		logger.Fatal("\n** Error: fails in reading Pandfile: %v.", err)
 		return
 	}
 
 	if lockResult := c.solutionData.LoadFromLock(c.pandaLockFile); lockResult != models.Success {
-		log.Fatalf("\n** error: fails in reading Pandfile.lock: %s.", c.pandaLockFile)
+		logger.Fatal("\n** Error: fails in reading Pandfile.lock: %s.", c.pandaLockFile)
 		return
 	}
 
 	if c.solutionData.LoadRemoteCommit() == false {
-		log.Fatalf("\n** error: fails in reading remote repo commit hash.")
+		logger.Fatal("\n** Error: fails in reading remote repo commit hash.")
 		return
 	}
 
 	var modified bool
 	if modified, err = c.solutionData.SyncLockData(); err != nil {
-		log.Fatalf("\n** error: fails in sync repo lock: %v.", err)
+		logger.Fatal("\n** Error: fails in sync repo lock: %v.", err)
 		return
 	}
 
 	if modified {
 		if err = c.solutionData.SyncLockFile(c.pandaLockFile); err != nil {
-			log.Fatalf("\n** error: fails in sync repo lock file: %v.", err)
+			logger.Fatal("\n** Error: fails in sync repo lock file: %v.", err)
 			return
 		}
-		fmt.Printf("\n** Info: Panda lock file had been updated.")
+		logger.Println("Info: Panda lock file had been updated.")
 	} else {
-		fmt.Printf("\n** Info: No commit updated. Skip write Panda lock file.")
+		logger.Println("Info: No commit updated. Skip write Panda lock file.")
 	}
 }
 

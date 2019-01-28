@@ -2,6 +2,7 @@ package models
 
 import (
 	"PandaBuilder/gitable"
+	"PandaBuilder/logger"
 	"PandaBuilder/yamlParser"
 	"bytes"
 	"errors"
@@ -33,12 +34,29 @@ func (c *PandaSolutionModel) ModuleWithName(name string) *ModuleModel {
 	return c.Modules.ModuleWithName(name)
 }
 
+func (c *PandaSolutionModel) ModuleWithUrl(url string) *ModuleModel {
+	if len(url) <= 0 {
+		return nil
+	}
+
+	aLib := c.LibraryWithUrl(url)
+	aMod := c.ModuleWithName(aLib.Name)
+	if aLib == nil || aMod == nil {
+		return nil
+	}
+	return aMod
+}
+
 func (c *PandaSolutionModel) LibraryWithIndex(index int) *LibraryModel {
 	return c.Libraries.LibraryWithIndex(index)
 }
 
 func (c *PandaSolutionModel) LibraryWithName(name string) *LibraryModel {
 	return c.Libraries.LibraryWithName(name)
+}
+
+func (c *PandaSolutionModel) LibraryWithUrl(url string) *LibraryModel {
+	return c.Libraries.LibraryWithUrl(url)
 }
 
 func (c *PandaSolutionModel) NumOfLibraries() int {
@@ -78,14 +96,14 @@ func (c *PandaSolutionModel) RemoteLibraryWithUrl(url string) *PandaSolutionLock
 
 func (self *PandaSolutionModel) SetupPandafile(path string) bool {
 	if len(path) == 0 {
-		log.Fatalf("\n** error: invalid directory for the flutter project workspace.")
+		logger.Fatal("\n** Error: invalid directory for the flutter project workspace.")
 		return false
 	}
 
 	pandaFile := filepath.Join(path, "Pandafile")
 
 	if fi, _ := os.Stat(pandaFile); fi != nil {
-		fmt.Printf("\n** warning: Pandafile is existed.\n** Skip setup flutter project environments.")
+		logger.Println("warning: Pandafile is existed.\n** Skip setup flutter project environments.")
 		return false
 	}
 
@@ -115,10 +133,10 @@ libraries:
 	`
 
 	if err := ioutil.WriteFile(pandaFile, bytes.NewBufferString(temp).Bytes(), os.ModePerm); err != nil {
-		log.Fatalf("\n** error: fails in write panda file: %s", pandaFile)
+		logger.Fatal("\n** Error: fails in write panda file: %s", pandaFile)
 		return false
 	} else {
-		fmt.Printf("\n** Flutter project environment had been setted up. \n** JOB DONE!. Have fun.")
+		logger.Println("Flutter project environment had been setted up. \n** JOB DONE!. Have fun.")
 		return true
 	}
 }
@@ -131,7 +149,7 @@ func (c *PandaSolutionModel) LoadFrom(path string) error {
 
 	ce := yamlParser.ConfigEngine{}
 	if err := ce.LoadFromYaml(path); err != nil {
-		log.Printf("\n** error: \"%v\" in reading \"%s\".", err, path)
+		logger.Error("\n Error: \"%v\" in reading \"%s\".", err, path)
 		return err
 	}
 
@@ -156,7 +174,7 @@ func (c *PandaSolutionModel) LoadFromLock(lockFile string) int {
 
 	var buffer []byte
 	if buffer, err = ioutil.ReadFile(lockFile); err != nil {
-		log.Fatalf("\n** error: error in reading %s: %v", lockFile, err)
+		logger.Fatal("\n** Error: error in reading %s: %v", lockFile, err)
 		return OperatorFails
 	}
 
@@ -180,10 +198,10 @@ func (c *PandaSolutionModel) LoadRemoteCommit() bool {
 	}
 
 	for _, eachRepo := range c.Libraries.Libraries {
-		fmt.Printf("\n** fetch %s", eachRepo.Name)
+		logger.Printf("Fetching %s", color.BWhite(eachRepo.Name))
 		curRepoRefCommitHash := gitable.GitRetrieveCommitHash(eachRepo.Git, eachRepo.Git.REF())
 		if len(curRepoRefCommitHash) <= 0 {
-			log.Printf("\n** warning: could not fetch library ref: %s's commit hash", eachRepo.Git.REF())
+			logger.Log("\n Warning: could not fetch library ref: %s's commit hash", eachRepo.Git.REF())
 			continue
 		}
 		pRemote := NewPandaSolutionLockModel(
@@ -193,7 +211,7 @@ func (c *PandaSolutionModel) LoadRemoteCommit() bool {
 			curRepoRefCommitHash,
 		)
 		c.Remote = append(c.Remote, pRemote)
-		fmt.Printf("\n** Result: git: %s, ref: %s, commit: %s", pRemote.URL(), pRemote.REF(), pRemote.CommitHash)
+		logger.PrintlnRaw(" -> GIT: %s, Ref: %s, Commit: %s", pRemote.URL(), pRemote.REF(), pRemote.CommitHash)
 	}
 	return true
 }
@@ -208,13 +226,13 @@ func (c *PandaSolutionModel) SyncLockData() (bool, error) {
 		remoteData := c.RemoteLibraryWithUrl(libData.Git.url)
 
 		if remoteData == nil {
-			fmt.Printf("\n** warning: could not fetch \"%s\" remote commit.", libData.Name)
+			logger.Println("warning: could not fetch \"%s\" remote commit.", libData.Name)
 			err = fmt.Errorf("\n** Error: could not find remote library: %s [%s].", libData.Name, libData.Git.URL())
 			break
 		}
 
 		if lockedData == nil {
-			fmt.Printf("\n** Update %s: NEW to commit: %s", libData.Name, remoteData.CommitHash)
+			logger.Println("Update %s: NEW to commit: %s", libData.Name, remoteData.CommitHash)
 			lockedData = NewPandaSolutionLockModel(libData.Git.repoType, libData.Git.url, libData.Git.ref, remoteData.CommitHash)
 			c.AppendLockLibrary(lockedData)
 			modified = true
@@ -222,10 +240,10 @@ func (c *PandaSolutionModel) SyncLockData() (bool, error) {
 		} else {
 			if lockedData.CommitHash == remoteData.CommitHash {
 				// SKIP, nonthing changed for this lib
-				fmt.Printf("\n** Using: %s: (%s)", color.Green(libData.Name), lockedData.CommitHash)
+				logger.Println("Using: %s: (%s)", color.BWhite(libData.Name), color.Green(lockedData.CommitHash))
 
 			} else {
-				fmt.Printf("\n** Update: %s: (%s) -> (%s)", color.Red(libData.Name), lockedData.CommitHash, remoteData.CommitHash)
+				logger.Println("Checkout %s from \"%s\" to \"%s\"", color.BWhite(libData.Name), color.Red(lockedData.CommitHash), color.Red(remoteData.CommitHash))
 				lockedData.repoType = libData.Git.repoType
 				lockedData.ref = libData.Git.ref
 				lockedData.CommitHash = remoteData.CommitHash
@@ -242,7 +260,7 @@ func (c *PandaSolutionModel) SyncLockData() (bool, error) {
 
 func (c *PandaSolutionModel) SyncLockFile(lockFile string) error {
 	if len(lockFile) == 0 {
-		log.Printf("\n** error: invalid lock file to write lock data")
+		logger.Error("\n Error: invalid lock file to write lock data")
 		return fmt.Errorf("\n** error: invalid lock file to write lock data")
 	}
 

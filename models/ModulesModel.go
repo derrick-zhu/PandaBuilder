@@ -1,6 +1,7 @@
 package models
 
 import (
+	"PandaBuilder/logger"
 	"bytes"
 	"encoding/gob"
 	"log"
@@ -27,12 +28,12 @@ func NewModuleModel(name string, path string, dependency []string) *ModuleModel 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err = enc.Encode(dependency); err != nil {
-		log.Printf("** error: fails in make module model[encode] %v.", err)
+		logger.Error("\n** Error: fails in make module model[encode] %v.", err)
 	}
 
 	dec := gob.NewDecoder(&buf)
 	if err = dec.Decode(&result.Dependency); err != nil {
-		log.Printf("** error: fails in make module model[decode] %v.", err)
+		logger.Error("\n** Error: fails in make module model[decode] %v.", err)
 	}
 
 	return result
@@ -57,11 +58,11 @@ func (c *ModuleModel) loadModule(mapValue map[interface{}]interface{}) bool {
 						c.Dependency = append(c.Dependency, dep.(string))
 					}
 				} else {
-					log.Printf("\n** warning: mapping a undefined key: %s with value: %v", skey, sval)
+					logger.Log("\n Warning: mapping a undefined key: %s with value: %v", skey, sval)
 				}
 			}
 		default:
-			log.Printf("\n** fails: in mapping data: %v into ModuleModel", value)
+			logger.Error("\n** Fails: in mapping data: %v into ModuleModel", value)
 		}
 		break // sorry, just only once, and who don't know about key's value, so using a iterator
 	}

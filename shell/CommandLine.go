@@ -1,8 +1,12 @@
 package shell
 
 import (
+	"PandaBuilder/logger"
 	"flag"
-	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 )
 
 const (
@@ -13,8 +17,9 @@ const (
 )
 
 type CommandLine struct {
-	Type   int
-	Params []string
+	Type      int
+	Workspace string
+	Params    []string
 
 	SkipUpdateLock       bool // 忽略更新Pandafile.lock
 	SkipRepoClone        bool // 忽略clone各个库
@@ -22,7 +27,7 @@ type CommandLine struct {
 }
 
 func (c *CommandLine) ShowHelp() {
-	fmt.Printf("\nUsage: \n\tPandaBulder [-setup|-update|-outdated|-bootstrap] <--skip-clone> <--no-update-lock> <--no-update-package>\n\nParameter:\n")
+	logger.Println("Usage: \n\tPandaBulder [workspace directory] [-setup|-update|-outdated|-bootstrap] <--skip-clone> <--no-update-lock> <--no-update-package>\n\nParameter:\n")
 	flag.PrintDefaults()
 	// 	fmt.Printf(`
 
@@ -62,7 +67,17 @@ func (c *CommandLine) Parse() bool {
 
 	flag.Parse()
 
-	//log.Printf("\nsetup:%t \nupdate:%t \noutdated:%t \nbootstrap:%t ", *cmdSetup, *cmdUpdate, *cmdOutdated, *cmdBootstrap)
+	for _, arg := range os.Args[1:] {
+		if strings.HasPrefix(arg, "-") || strings.HasPrefix(arg, "--") {
+			continue
+		}
+		c.Workspace = arg
+		break
+	}
+
+	if len(c.Workspace) <= 0 {
+		c.Workspace = executePath()
+	}
 
 	if *cmdBootstrap {
 		c.Type = Bootstrap
@@ -73,6 +88,16 @@ func (c *CommandLine) Parse() bool {
 	} else if *cmdSetup {
 		c.Type = Setup
 	}
+
+	execPath := executePath()
+
+	pandaFile := path.Join(c.Workspace, "Pandafile")
+	pandaLockFile := path.Join(c.Workspace, "Pandafile.lock")
+
+	c.AppendCommandParam(execPath)
+	c.AppendCommandParam(pandaFile)
+	c.AppendCommandParam(pandaLockFile)
+
 	return true
 }
 
@@ -81,4 +106,13 @@ func (c *CommandLine) AppendCommandParam(newParam string) {
 		c.Params = []string{}
 	}
 	c.Params = append(c.Params, newParam)
+}
+
+func executePath() string {
+	var dir string
+	var err error
+	if dir, err = filepath.Abs(filepath.Dir(os.Args[0])); err != nil {
+		return ""
+	}
+	return dir
 }

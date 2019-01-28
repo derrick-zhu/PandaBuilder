@@ -1,6 +1,7 @@
 package models
 
 import (
+	"PandaBuilder/logger"
 	"log"
 	"strings"
 )
@@ -45,7 +46,7 @@ func (c *PackageGitModel) SetUpWith(repo string) {
 func (c *PackageGitModel) RepoTypeDescription() string {
 	Repo := []string{"git"}
 	if c.repoType < 0 || c.repoType >= len(Repo) {
-		log.Fatalf("\n** error: invalid repo type: %d", c.repoType)
+		logger.Fatal("\n** Error: invalid repo type: %d", c.repoType)
 		return ""
 	}
 	return Repo[c.repoType]
@@ -53,7 +54,7 @@ func (c *PackageGitModel) RepoTypeDescription() string {
 
 func (c *PackageGitModel) loadGitData(data map[interface{}]interface{}) bool {
 	if data == nil {
-		log.Printf("\n** warning: null data for PackageGitModel")
+		logger.Log("\n Warning: null data for PackageGitModel")
 		return true
 	}
 
@@ -68,11 +69,11 @@ func (c *PackageGitModel) loadGitData(data map[interface{}]interface{}) bool {
 				} else if strings.ToLower(propKey.(string)) == "ref" {
 					c.ref = propValue.(string)
 				} else {
-					log.Printf("\n** warnning: mapping a undefined key: %s with value: %v", propKey, propValue)
+					logger.Verbose("\n** Warnning: mapping a undefined key: %s with value: %v", propKey, propValue)
 				}
 			}
 		default:
-			log.Printf("\n** fails: in mapping data: %v into PackageGitModel", value)
+			logger.Error("\n** Fails: in mapping data: %v into PackageGitModel", value)
 		}
 		break
 	}

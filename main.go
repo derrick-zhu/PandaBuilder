@@ -2,32 +2,13 @@ package main
 
 import (
 	"PandaBuilder/command"
+	"PandaBuilder/logger"
 	"PandaBuilder/shell"
-	"fmt"
-	"os"
-	"path/filepath"
 )
-
-func executePath() string {
-	var dir string
-	var err error
-	if dir, err = filepath.Abs(filepath.Dir(os.Args[0])); err != nil {
-		return ""
-	}
-	return dir
-}
 
 func main() {
 	cl := shell.CommandLine{}
 	cl.Parse()
-
-	execPath := executePath()
-	pandaFile := execPath + "/Pandafile"
-	pandaLockFile := execPath + "/Pandafile.lock"
-
-	cl.AppendCommandParam(execPath)
-	cl.AppendCommandParam(pandaFile)
-	cl.AppendCommandParam(pandaLockFile)
 
 	var cmd command.CommandProtocol
 
@@ -49,7 +30,7 @@ func main() {
 		break
 
 	default:
-		fmt.Printf("\n** warning: invalid command: \"%v\"\n", cl.Type)
+		logger.Println("warning: invalid command: \"%v\"\n", cl.Type)
 		cl.ShowHelp()
 
 		return

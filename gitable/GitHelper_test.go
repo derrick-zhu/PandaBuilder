@@ -98,3 +98,25 @@ func TestGitClone(t *testing.T) {
 		})
 	}
 }
+
+func TestGitFetch(t *testing.T) {
+	type args struct {
+		aGit   GitProtocol
+		remote string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"", args{testGit{}, ""}, true},
+		{"", args{testGit{}, "--all"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GitFetch(tt.args.aGit, tt.args.remote); got != tt.want {
+				t.Errorf("GitFetch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

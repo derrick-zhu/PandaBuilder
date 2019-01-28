@@ -1,8 +1,8 @@
 package models
 
 import (
+	"PandaBuilder/logger"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -22,13 +22,13 @@ func NewPandaSolutionLockModel(repoType int, url string, ref string, commitHash 
 
 func (c *PandaSolutionLockModel) LoadFromLock(pandaLine string) bool {
 	if len(pandaLine) <= 0 {
-		log.Printf("\n** warning: panda lock text is empty.")
+		logger.Log("\n Warning: panda lock text is empty.")
 		return false
 	}
 
-	var allSegments []string = strings.Fields(pandaLine)
+	allSegments := strings.Fields(pandaLine)
 	if len(allSegments) != 3 {
-		log.Printf("\n** warning: invalid lock item %s", pandaLine)
+		logger.Log("\n Warning: invalid lock item %s", pandaLine)
 		return false
 	}
 

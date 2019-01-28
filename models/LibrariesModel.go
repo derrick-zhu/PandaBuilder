@@ -1,6 +1,6 @@
 package models
 
-import "log"
+import "PandaBuilder/logger"
 
 type LibraryModel struct {
 	Name string
@@ -9,7 +9,7 @@ type LibraryModel struct {
 
 func (c *LibraryModel) loadLibrary(data map[interface{}]interface{}) bool {
 	if data == nil {
-		log.Printf("\n** warning: null data for LibraryModel")
+		logger.Log("\n Warning: null data for LibraryModel")
 		return true
 	}
 
@@ -21,7 +21,7 @@ func (c *LibraryModel) loadLibrary(data map[interface{}]interface{}) bool {
 			c.Git.loadGitData(value.(map[interface{}]interface{}))
 
 		default:
-			log.Printf("\n** warning: invalid type for %s of data: %v", key, value)
+			logger.Log("\n Warning: invalid type for %s of data: %v", key, value)
 		}
 		break
 	}
@@ -29,23 +29,36 @@ func (c *LibraryModel) loadLibrary(data map[interface{}]interface{}) bool {
 }
 
 type LibrariesModel struct {
-	Libraries []LibraryModel
+	Libraries []*LibraryModel
 }
 
 func (c *LibrariesModel) LibraryWithIndex(index int) *LibraryModel {
 	if index < 0 || index >= len(c.Libraries) {
 		return nil
 	}
-	return &c.Libraries[index]
+	return c.Libraries[index]
 }
 
 func (c *LibrariesModel) LibraryWithName(name string) *LibraryModel {
-	if len(name) == 0 {
+	if len(name) <= 0 {
 		return nil
 	}
 	for _, eachLib := range c.Libraries {
 		if eachLib.Name == name {
-			return &eachLib
+			return eachLib
+		}
+	}
+	return nil
+}
+
+func (c *LibrariesModel) LibraryWithUrl(url string) *LibraryModel {
+	if len(url) <= 0 {
+		return nil
+	}
+
+	for _, eachLib := range c.Libraries {
+		if eachLib.Git.URL() == url {
+			return eachLib
 		}
 	}
 	return nil
@@ -60,9 +73,9 @@ func (c *LibrariesModel) loadLibraries(libs []interface{}) bool {
 		return false
 	}
 
-	c.Libraries = []LibraryModel{}
+	c.Libraries = []*LibraryModel{}
 	for _, value := range libs {
-		aLib := LibraryModel{}
+		aLib := &LibraryModel{}
 		aLib.loadLibrary(value.(map[interface{}]interface{}))
 		c.Libraries = append(c.Libraries, aLib)
 	}

@@ -14,6 +14,7 @@ const (
 	Update                // check and update local into latest commit
 	Outdated              // check and update Pandafile.lock
 	Bootstrap             // according Pandafile.lock, fetch
+	Commit                // commit and push current modifications
 )
 
 type CommandLine struct {
@@ -59,6 +60,7 @@ func (c *CommandLine) Parse() bool {
 	cmdUpdate := flag.Bool("update", false, "fetch and update Pandafile.lock and its flutter workspace")
 	cmdOutdated := flag.Bool("outdated", false, "fetch and update Pandafile.lock")
 	cmdBootstrap := flag.Bool("bootstrap", false, "update flutter workspace by Pandafile.lock")
+	cmdCommit := flag.Bool("commit", false, "commit the modification to remote repo.")
 
 	// external flags
 	c.SkipRepoClone = *flag.Bool("-skip-clone", false, "skip clone remote repo into local directory")
@@ -87,6 +89,8 @@ func (c *CommandLine) Parse() bool {
 		c.Type = Update
 	} else if *cmdSetup {
 		c.Type = Setup
+	} else if *cmdCommit {
+		c.Type = Commit
 	}
 
 	execPath := executePath()

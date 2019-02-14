@@ -29,6 +29,10 @@ func main() {
 		cmd = command.Factory("bootstrap", cl.Params)
 		break
 
+	case shell.Commit:
+		cmd = command.Factory("commit", cl.Params)
+		break
+
 	default:
 		logger.Println("warning: invalid command: \"%v\"\n", cl.Type)
 		cl.ShowHelp()

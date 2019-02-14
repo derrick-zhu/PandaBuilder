@@ -27,6 +27,8 @@ func Factory(cmdType string, argv []string) CommandProtocol {
 		return NewCommandUpdate(argv)
 	} else if tmp == "bootstrap" {
 		return NewCommandBootstrap(argv)
+	} else if tmp == "commit" {
+		return NewCommandCommit(argv)
 	} else {
 		return nil
 	}
